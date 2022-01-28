@@ -101,6 +101,8 @@ summary(LMEM3)
 LMEM4 <- lmer(RT ~ wordness + (1 + wordness | subject) + (1 + prime + luminance || item), data = d, control=lmerControl(optimizer="bobyqa"))
 summary(LMEM4)
 
+ranef(LMEM4)
+
 
 # Could drop one of the random effects
 LMEM5 <- lmer(RT ~ wordness + (1 + wordness | subject) + (1 + prime | item), data = d, control=lmerControl(optimizer="bobyqa"))
@@ -126,7 +128,7 @@ summary(LMEM1)
 
 
 # 2. sum / orthogonal - relative to the grand mean
-d$wordness_sum <- d$wordness
+d$wordness_sum <- d$wordnessx
 contrasts(d$wordness_sum) <- c(-1, 1)
 
 LMEM1.2 <- lmer(RT ~ wordness_sum + (1 + wordness_sum | subject) + (1 | item), data = d, control=lmerControl(optimizer="bobyqa"))
@@ -215,6 +217,7 @@ newdat <- expand.grid(
   word_c = c(-.5, .5)  )
 
 
+
 # 1 - Simulating plausible parameter values
 sims <- arm::sim(LMEM8, n.sims = 1000)
 
@@ -240,17 +243,12 @@ newdat$upper <- apply(fitmat, 1, quantile, prob=0.95)
 
 ### Plotting the interaction  
 
-# for plotting purposes
-newdat <- newdat %>%
-  mutate(word_c = factor(word_c, levels = c(-.5, .5), labels = c("nonword", "word")))
-  
 
 # Plot model predictions overlayed on average data
 d %>%
-  mutate(word_c = factor(word_c, levels = c(-.5, .5), labels = c("nonword", "word"))) %>%   
   group_by(subject, lum_c, word_c) %>%
   summarise(RT = mean(RT)) %>%
-  ggplot(aes(x = lum_c, y = RT, col = word_c, fill = word_c)) +
+  ggplot(aes(x = lum_c, y = RT, col = factor(word_c), fill = factor(word_c))) +
   
   # Participants' data - dots (with SE across Ss, thanks to previously averaging within Ss)
   stat_summary(fun.data="mean_se", geom="pointrange", size=.8) +
@@ -365,7 +363,7 @@ p.lumHi # Yes!
 # install.packages("sjPlot")
 # library(sjPlot)
 
-sjPlot::plot_model(MEM8)
+sjPlot::plot_model(LMEM8)
 
 
 
@@ -431,19 +429,19 @@ mycoefplot <- function(model, cint, cols="black", intercept=0,
 }
 
 ### using this requires first obtaining CIs
-varNames <- names(fixef(MEM8)) # restricted to the fixed effects
-MEM8.ci <- confint(MEM8, varNames, method="Wald", # or method="boot" for bootstrapped CIs
+varNames <- names(fixef(LMEM8)) # restricted to the fixed effects
+LMEM8.ci <- confint(LMEM8, varNames, method="Wald", # or method="boot" for bootstrapped CIs
                     parallel="multicore", ncpus=4) # useful for "boot"
 
 # to have a look (by default, the intercept is ignored)
-mycoefplot(MEM8, MEM8.ci, save=F)
+mycoefplot(LMEM8, LMEM8.ci, save=F)
 
 # could specify different colours per effect, e.g. to emphasise sig effects
-mycoefplot(MEM8, MEM8.ci, cols=c("black","blue","red"), save=F)
+mycoefplot(LMEM8, LMEM8.ci, cols=c("black","blue","red"), save=F)
 
 # for prettier names and to save automatically           
 varPlotNames <- rev(c("Luminance", "Wordness", "Luminance x Wordness"))
-mycoefplot(MEM8, MEM8.ci, varPlotNames=varPlotNames,
+mycoefplot(LMEM8, LMEM8.ci, varPlotNames=varPlotNames,
                         dev="png", figName= "MEM8_coefplot",
                                   width=6, height=4)
 
